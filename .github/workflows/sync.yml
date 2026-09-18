@@ -1,0 +1,31 @@
+name: Sync Fixtures
+
+on:
+  schedule:
+    - cron: '30 10,16 * * *' # Gira alle 10:30 e alle 16:30 UTC (prima delle scansioni delle 11 e 17)
+  workflow_dispatch: # Permette di avviarlo a mano con un click
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download fixtures.csv
+        run: |
+          curl -sL -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" "https://football-data.co.uk/fixtures.csv" -o fixtures.csv
+          if [ ! -s fixtures.csv ] || ! grep -q "Div" fixtures.csv; then
+            echo "Download fallito o file non valido"
+            exit 1
+          fi
+
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add fixtures.csv
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update fixtures.csv" && git push)
